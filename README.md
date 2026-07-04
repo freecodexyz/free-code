@@ -22,11 +22,19 @@
 
 ## Quick Install
 
+### macOS / Linux
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/paoloanzn/free-code/main/install.sh | bash
 ```
 
-Checks your system, installs Bun if needed, clones the repo, builds with all experimental features enabled, and symlinks `free-code` on your PATH.
+### Windows (PowerShell)
+
+```powershell
+powershell -ExecutionPolicy Bypass -File install.ps1
+```
+
+No WSL required. The PowerShell installer detects your system, installs Bun if needed, clones the repo, builds with all experimental features, and adds `free-code` to your PATH.
 
 Then run `free-code` and use the `/login` command to authenticate with your preferred model provider.
 
@@ -162,7 +170,7 @@ Supports custom deployment IDs as model names.
 ## Requirements
 
 - **Runtime**: [Bun](https://bun.sh) >= 1.3.11
-- **OS**: macOS or Linux (Windows via WSL)
+- **OS**: macOS, Linux, or Windows (native or via WSL)
 - **Auth**: An API key or OAuth login for your chosen provider
 
 ```bash

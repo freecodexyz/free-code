@@ -1,0 +1,5 @@
+# CODEOWNERS
+# https://docs.github.com/en/repositories/administrating-your-repository/managing-repository-settings/defining-owners-about-code-owners
+
+# Default owners for everything
+* @paoloanzn @alfep
