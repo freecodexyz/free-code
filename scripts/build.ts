@@ -170,7 +170,6 @@ const cmd = [
   '--outfile',
   outfile,
   '--minify',
-  '--bytecode',
   '--packages',
   'bundle',
   '--conditions',
