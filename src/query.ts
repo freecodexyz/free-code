@@ -124,13 +124,25 @@ function* yieldMissingToolResultBlocks(
   assistantMessages: AssistantMessage[],
   errorMessage: string,
 ) {
-  for (const assistantMessage of assistantMessages) {
+  // Filter out duplicate tool use blocks within the same message to prevent duplicate tool results
+  const uniqueAssistantMessages = assistantMessages.map(assistantMessage => {
+    const content = assistantMessage.message.content
+    const uniqueContent = content.filter((item, index, self) => {
+      if (item.type !== 'tool_use') return true
+      return index === self.findIndex(other =>
+        other.type === 'tool_use' && other.id === item.id
+      )
+    })
+    return { ...assistantMessage, message: { ...assistantMessage.message, content: uniqueContent } }
+  })
+
+  for (const assistantMessage of uniqueAssistantMessages) {
     // Extract all tool use blocks from this assistant message
     const toolUseBlocks = assistantMessage.message.content.filter(
       content => content.type === 'tool_use',
     ) as ToolUseBlock[]
 
-    // Emit an interruption message for each tool use
+    // Emit an interruption message for each unique tool use
     for (const toolUse of toolUseBlocks) {
       yield createUserMessage({
         content: [

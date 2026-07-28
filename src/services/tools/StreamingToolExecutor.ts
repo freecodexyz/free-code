@@ -74,6 +74,12 @@ export class StreamingToolExecutor {
    * Add a tool to the execution queue. Will start executing immediately if conditions allow.
    */
   addTool(block: ToolUseBlock, assistantMessage: AssistantMessage): void {
+    // Prevent duplicate tool additions - if a tool with this ID already exists, skip it.
+    // This can happen when provider disconnects/reconnects and resends the same tool_use block.
+    if (this.tools.some(t => t.id === block.id)) {
+      return
+    }
+
     const toolDefinition = findToolByName(this.toolDefinitions, block.name)
     if (!toolDefinition) {
       this.tools.push({
