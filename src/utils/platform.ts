@@ -8,6 +8,27 @@ export type Platform = 'macos' | 'windows' | 'wsl' | 'linux' | 'unknown'
 
 export const SUPPORTED_PLATFORMS: Platform[] = ['macos', 'wsl']
 
+/**
+ * Returns true if the current platform is Windows.
+ */
+export function isWindows(): boolean {
+  return process.platform === 'win32'
+}
+
+/**
+ * Returns the default shell for the current platform.
+ * On Windows, returns cmd.exe or PowerShell path.
+ * On Unix, returns /bin/bash or the value of $SHELL.
+ */
+export function getShell(): string {
+  if (isWindows()) {
+    // Prefer PowerShell if available, fall back to cmd.exe
+    const comSpec = process.env.COMSPEC || 'C:\\Windows\\System32\\cmd.exe'
+    return comSpec
+  }
+  return process.env.SHELL || '/bin/bash'
+}
+
 export const getPlatform = memoize((): Platform => {
   try {
     if (process.platform === 'darwin') {

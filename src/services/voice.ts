@@ -9,6 +9,7 @@ import { readFile } from 'fs/promises'
 import { logForDebugging } from '../utils/debug.js'
 import { isEnvTruthy, isRunningOnHomespace } from '../utils/envUtils.js'
 import { logError } from '../utils/log.js'
+import { tryLoadNapi } from '../utils/napiLoader.js'
 import { getPlatform } from '../utils/platform.js'
 
 // Lazy-loaded native audio module. audio-capture.node links against
@@ -40,8 +41,15 @@ let audioNapiPromise: Promise<AudioNapi> | null = null
 function loadAudioNapi(): Promise<AudioNapi> {
   audioNapiPromise ??= (async () => {
     const t0 = Date.now()
+    const mod = await tryLoadNapi<AudioNapi>('audio-capture-napi')
+    if (!mod) {
+      audioNapi = unavailableAudioNapi
+      logForDebugging(
+        '[voice] audio-capture-napi unavailable, falling back: native module not loaded',
+      )
+      return unavailableAudioNapi
+    }
     try {
-      const mod = (await import('audio-capture-napi')) as AudioNapi
       // vendor/audio-capture-src/index.ts defers require(...node) until the
       // first function call — trigger it here so timing reflects real cost.
       mod.isNativeAudioAvailable()

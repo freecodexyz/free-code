@@ -18,7 +18,9 @@ export const getManagedFilePath = memoize(function (): string {
     case 'macos':
       return '/Library/Application Support/ClaudeCode'
     case 'windows':
-      return 'C:\\Program Files\\ClaudeCode'
+      return process.env.ProgramData
+        ? process.env.ProgramData + '\\claude-code'
+        : 'C:\\ProgramData\\claude-code'
     default:
       return '/etc/claude-code'
   }

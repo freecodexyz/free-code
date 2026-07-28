@@ -18,11 +18,28 @@ import {
   maybeResizeAndDownsampleImageBuffer,
 } from './imageResizer.js'
 import { logError } from './log.js'
+import { tryLoadNapi } from './napiLoader.js'
 
 // Native NSPasteboard reader. GrowthBook gate tengu_collage_kaleidoscope is
 // a kill switch (default on). Falls through to osascript when off.
 // The gate string is inlined at each callsite INSIDE the feature() condition
 // — module-scope helpers are NOT tree-shaken (see docs/feature-gating.md).
+
+type ImageProcessorNapi = {
+  getNativeModule: () => {
+    hasClipboardImage?: () => boolean
+    readClipboardImage?: (
+      maxWidth: number,
+      maxHeight: number,
+    ) => {
+      png: Buffer
+      originalWidth: number
+      originalHeight: number
+      width: number
+      height: number
+    } | null
+  } | null
+}
 
 type SupportedPlatform = 'darwin' | 'linux' | 'win32'
 
@@ -105,8 +122,8 @@ export async function hasImageInClipboard(): Promise<boolean> {
     // when the module/export is missing. Catch a throw too: it would surface
     // as an unhandled rejection in useClipboardImageHint's setTimeout.
     try {
-      const { getNativeModule } = await import('image-processor-napi')
-      const hasImage = getNativeModule()?.hasClipboardImage
+      const mod = await tryLoadNapi<ImageProcessorNapi>('image-processor-napi')
+      const hasImage = mod?.getNativeModule?.()?.hasClipboardImage
       if (hasImage) {
         return hasImage()
       }
@@ -134,8 +151,8 @@ export async function getImageFromClipboard(): Promise<ImageWithDimensions | nul
     getFeatureValue_CACHED_MAY_BE_STALE('tengu_collage_kaleidoscope', true)
   ) {
     try {
-      const { getNativeModule } = await import('image-processor-napi')
-      const readClipboard = getNativeModule()?.readClipboardImage
+      const mod = await tryLoadNapi<ImageProcessorNapi>('image-processor-napi')
+      const readClipboard = mod?.getNativeModule?.()?.readClipboardImage
       if (!readClipboard) {
         throw new Error('native clipboard reader unavailable')
       }

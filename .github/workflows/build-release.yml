@@ -1,0 +1,123 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g. v2.1.87)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Create @ant stub packages
+        run: |
+          mkdir -p node_modules/@ant/computer-use-mcp
+          cat > node_modules/@ant/computer-use-mcp/package.json << 'EOF'
+          { "name": "@ant/computer-use-mcp", "version": "0.0.0", "main": "index.js" }
+          EOF
+          cat > node_modules/@ant/computer-use-mcp/index.js << 'EOF'
+          export function buildComputerUseTools() { return []; }
+          export function createComputerUseMcpServer() { return null; }
+          export const API_RESIZE_PARAMS = {};
+          export const targetImageSize = 768;
+          export function bindSessionContext() {}
+          export const DEFAULT_GRANT_FLAGS = [];
+          EOF
+          cat > node_modules/@ant/computer-use-mcp/types.js << 'EOF'
+          export const DEFAULT_GRANT_FLAGS = {};
+          EOF
+          cat > node_modules/@ant/computer-use-mcp/sentinelApps.js << 'EOF'
+          export function getSentinelCategory() { return null; }
+          EOF
+
+          mkdir -p node_modules/@ant/computer-use-input
+          cat > node_modules/@ant/computer-use-input/package.json << 'EOF'
+          { "name": "@ant/computer-use-input", "version": "0.0.0", "main": "index.js" }
+          EOF
+          cat > node_modules/@ant/computer-use-input/index.js << 'EOF'
+          export const isSupported = false;
+          EOF
+
+          mkdir -p node_modules/@ant/computer-use-swift
+          cat > node_modules/@ant/computer-use-swift/package.json << 'EOF'
+          { "name": "@ant/computer-use-swift", "version": "0.0.0", "main": "index.js" }
+          EOF
+          cat > node_modules/@ant/computer-use-swift/index.js << 'EOF'
+          export {};
+          EOF
+
+          mkdir -p node_modules/@ant/claude-for-chrome-mcp
+          cat > node_modules/@ant/claude-for-chrome-mcp/package.json << 'EOF'
+          { "name": "@ant/claude-for-chrome-mcp", "version": "0.0.0", "main": "index.js" }
+          EOF
+          cat > node_modules/@ant/claude-for-chrome-mcp/index.js << 'EOF'
+          export const BROWSER_TOOLS = [];
+          export function createClaudeForChromeMcpServer() { return null; }
+          EOF
+
+      - name: Build Windows .exe
+        run: bun run scripts/build.ts --compile --windows
+
+      - name: Build Linux binary
+        run: bun run scripts/build.ts --compile
+
+      - name: Build JS bundle
+        run: bun run scripts/build.ts
+
+      - name: Package JS bundle
+        run: |
+          mkdir -p dist-bundle
+          cp -r dist-js dist-bundle/
+          cp package.json dist-bundle/
+          cd dist-bundle
+          cat > README.md << 'EOF'
+          # free-code CLI — JS Bundle
+
+          ## Usage
+          ```bash
+          # With Bun
+          bun cli.js --version
+
+          # With Node.js 18+
+          node cli.js --version
+          ```
+          EOF
+          zip -r ../cli-js-bundle.zip .
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "tag=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
+          generate_release_notes: true
+          files: |
+            dist/cli.exe
+            dist/cli
+            cli-js-bundle.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

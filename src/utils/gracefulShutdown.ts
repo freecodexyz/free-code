@@ -40,6 +40,7 @@ import { runCleanupFunctions } from './cleanupRegistry.js'
 import { logForDebugging } from './debug.js'
 import { logForDiagnosticsNoPII } from './diagLogs.js'
 import { isEnvTruthy } from './envUtils.js'
+import { crossPlatformKill } from './process/kill.js'
 import { getCurrentSessionTitle, sessionIdExists } from './sessionStorage.js'
 import { sleep } from './sleep.js'
 import { profileReport } from './startupProfiler.js'
@@ -219,7 +220,7 @@ function forceExit(exitCode: number): never {
       throw e
     }
     // Fall back to SIGKILL which doesn't try to flush anything.
-    process.kill(process.pid, 'SIGKILL')
+    crossPlatformKill(process.pid, 'SIGKILL')
   }
   // In tests, process.exit may be mocked to return instead of exiting.
   // In production, we should never reach here.

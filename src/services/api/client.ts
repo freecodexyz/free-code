@@ -21,6 +21,7 @@ import { getUserAgent } from 'src/utils/http.js'
 import { getSmallFastModel } from 'src/utils/model/model.js'
 import {
   getAPIProvider,
+  getApiBaseUrl,
   isFirstPartyAnthropicBaseUrl,
 } from 'src/utils/model/providers.js'
 import { getProxyFetchOptions } from 'src/utils/proxy.js'
@@ -146,6 +147,11 @@ export async function getAnthropicClient({
 
   const resolvedFetch = buildFetch(fetchOverride, source)
 
+  // Resolve custom API base URL. When set, bypass provider routing entirely
+  // (Bedrock/Foundry/Vertex/Codex) since the user is pointing to a custom
+  // Anthropic-compatible endpoint.
+  const customBaseUrl = getApiBaseUrl()
+
   const ARGS = {
     defaultHeaders,
     maxRetries,
@@ -158,7 +164,7 @@ export async function getAnthropicClient({
       fetch: resolvedFetch,
     }),
   }
-  if (isEnvTruthy(process.env.CLAUDE_CODE_USE_BEDROCK)) {
+  if (isEnvTruthy(process.env.CLAUDE_CODE_USE_BEDROCK) && !customBaseUrl) {
     const { AnthropicBedrock } = await import('@anthropic-ai/bedrock-sdk')
     // Use region override for small fast model if specified
     const awsRegion =
@@ -196,7 +202,7 @@ export async function getAnthropicClient({
     // we have always been lying about the return type - this doesn't support batching or models
     return new AnthropicBedrock(bedrockArgs) as unknown as Anthropic
   }
-  if (isEnvTruthy(process.env.CLAUDE_CODE_USE_FOUNDRY)) {
+  if (isEnvTruthy(process.env.CLAUDE_CODE_USE_FOUNDRY) && !customBaseUrl) {
     const { AnthropicFoundry } = await import('@anthropic-ai/foundry-sdk')
     // Determine Azure AD token provider based on configuration
     // SDK reads ANTHROPIC_FOUNDRY_API_KEY by default
@@ -226,7 +232,7 @@ export async function getAnthropicClient({
     // we have always been lying about the return type - this doesn't support batching or models
     return new AnthropicFoundry(foundryArgs) as unknown as Anthropic
   }
-  if (isEnvTruthy(process.env.CLAUDE_CODE_USE_VERTEX)) {
+  if (isEnvTruthy(process.env.CLAUDE_CODE_USE_VERTEX) && !customBaseUrl) {
     // Refresh GCP credentials if gcpAuthRefresh is configured and credentials are expired
     // This is similar to how we handle AWS credential refresh for Bedrock
     if (!isEnvTruthy(process.env.CLAUDE_CODE_SKIP_VERTEX_AUTH)) {
@@ -306,7 +312,7 @@ export async function getAnthropicClient({
   }
 
   // ── Codex (OpenAI) provider via fetch adapter ─────────────────────
-  if (isCodexSubscriber()) {
+  if (isCodexSubscriber() && !customBaseUrl) {
     const codexTokens = getCodexOAuthTokens()
     if (codexTokens?.accessToken) {
       const codexFetch = createCodexFetch(codexTokens.accessToken)
@@ -321,16 +327,20 @@ export async function getAnthropicClient({
   }
 
   // Determine authentication method based on available tokens
+  // Custom base URL (env or settings) takes priority over staging OAuth URL.
+  const stagingBaseUrl =
+    process.env.USER_TYPE === 'ant' &&
+    isEnvTruthy(process.env.USE_STAGING_OAUTH)
+      ? getOauthConfig().BASE_API_URL
+      : undefined
+  const resolvedBaseUrl = customBaseUrl || stagingBaseUrl
   const clientConfig: ConstructorParameters<typeof Anthropic>[0] = {
     apiKey: isClaudeAISubscriber() ? null : apiKey || getAnthropicApiKey(),
     authToken: isClaudeAISubscriber()
       ? getClaudeAIOAuthTokens()?.accessToken
       : undefined,
-    // Set baseURL from OAuth config when using staging OAuth
-    ...(process.env.USER_TYPE === 'ant' &&
-    isEnvTruthy(process.env.USE_STAGING_OAUTH)
-      ? { baseURL: getOauthConfig().BASE_API_URL }
-      : {}),
+    // Set baseURL from custom endpoint (env/settings) or staging OAuth config
+    ...(resolvedBaseUrl ? { baseURL: resolvedBaseUrl } : {}),
     ...ARGS,
     ...(isDebugToStdErr() && { logger: createStderrLogger() }),
   }

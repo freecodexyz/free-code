@@ -79,6 +79,21 @@ async function main(): Promise<void> {
     console.log(prompt.join('\n'));
     return;
   }
+  // Fast-path for --list-models: fetch and display available models, then exit.
+  // Does not start the interactive REPL.
+  if (args.includes('--list-models')) {
+    profileCheckpoint('cli_list_models_path');
+    const {
+      enableConfigs
+    } = await import('../utils/config.js');
+    enableConfigs();
+    const {
+      listModelsAndExit
+    } = await import('../commands/listModels.js');
+    await listModelsAndExit();
+    return;
+  }
+
   if (process.argv[2] === '--claude-in-chrome-mcp') {
     profileCheckpoint('cli_claude_in_chrome_mcp_path');
     const {

@@ -17,6 +17,7 @@ import {
   filterExistingPaths,
   getKnownPathsForRepo,
 } from '../githubRepoPathMapping.js'
+import { tryLoadNapi } from '../napiLoader.js'
 import { jsonStringify } from '../slowOperations.js'
 import { readLastFetchTime } from './banner.js'
 import { parseDeepLink } from './parseDeepLink.js'
@@ -92,7 +93,13 @@ export async function handleUrlSchemeLaunch(): Promise<number | null> {
   }
 
   try {
-    const { waitForUrlEvent } = await import('url-handler-napi')
+    const mod = await tryLoadNapi<{
+      waitForUrlEvent: (timeoutMs: number) => string | null
+    }>('url-handler-napi')
+    const waitForUrlEvent = mod?.waitForUrlEvent
+    if (!waitForUrlEvent) {
+      return null
+    }
     const url = waitForUrlEvent(5000)
     if (!url) {
       return null

@@ -34,7 +34,10 @@ import { capitalize } from '../stringUtils.js'
 
 export type ModelShortName = string
 export type ModelName = string
-export type ModelSetting = ModelName | ModelAlias | null
+// ModelName is already `string`, but `string` is listed explicitly so arbitrary
+// custom model names (e.g. third-party deployment IDs) are accepted everywhere
+// a ModelSetting is consumed.
+export type ModelSetting = ModelName | ModelAlias | string | null
 
 export function getSmallFastModel(): ModelName {
   return process.env.ANTHROPIC_SMALL_FAST_MODEL || getDefaultHaikuModel()
@@ -50,6 +53,17 @@ export function isNonCustomOpusModel(model: ModelName): boolean {
 }
 
 /**
+ * Read the `customModel` field from settings. This holds an arbitrary model
+ * name string (e.g. a custom deployment ID or third-party model) and takes
+ * precedence over the predefined-alias `model` setting.
+ */
+export function getCustomModelFromSettings(
+  settings: ReturnType<typeof getSettings_DEPRECATED> = getSettings_DEPRECATED(),
+): string | undefined {
+  return (settings || {}).customModel || undefined
+}
+
+/**
  * Helper to get the model from /model (including via /config), the --model flag, environment variable,
  * or the saved settings. The returned value can be a model alias if that's what the user specified.
  * Undefined if the user didn't configure anything, in which case we fall back to
@@ -59,7 +73,8 @@ export function isNonCustomOpusModel(model: ModelName): boolean {
  * 1. Model override during session (from /model command) - highest priority
  * 2. Model override at startup (from --model flag)
  * 3. ANTHROPIC_MODEL environment variable
- * 4. Settings (from user's saved settings)
+ * 4. Settings `customModel` field (arbitrary string)
+ * 5. Settings `model` field (predefined aliases)
  */
 export function getUserSpecifiedModelSetting(): ModelSetting | undefined {
   let specifiedModel: ModelSetting | undefined
@@ -69,7 +84,11 @@ export function getUserSpecifiedModelSetting(): ModelSetting | undefined {
     specifiedModel = modelOverride
   } else {
     const settings = getSettings_DEPRECATED() || {}
-    specifiedModel = process.env.ANTHROPIC_MODEL || settings.model || undefined
+    specifiedModel =
+      process.env.ANTHROPIC_MODEL ||
+      getCustomModelFromSettings(settings) ||
+      settings.model ||
+      undefined
   }
 
   // Ignore the user-specified model if it's not in the availableModels allowlist.
@@ -87,8 +106,9 @@ export function getUserSpecifiedModelSetting(): ModelSetting | undefined {
  * 1. Model override during session (from /model command) - highest priority
  * 2. Model override at startup (from --model flag)
  * 3. ANTHROPIC_MODEL environment variable
- * 4. Settings (from user's saved settings)
- * 5. Built-in default
+ * 4. Settings `customModel` field (arbitrary string)
+ * 5. Settings `model` field (predefined aliases)
+ * 6. Built-in default
  *
  * @returns The resolved model name to use
  */
@@ -478,6 +498,14 @@ export function getPublicModelName(model: ModelName): string {
  *
  * Supports [1m] suffix on any model alias (e.g., haiku[1m], sonnet[1m]) to enable
  * 1M context window without requiring each variant to be in MODEL_ALIASES.
+ *
+ * Resolution order:
+ * 1. Predefined alias (sonnet/opus/haiku/best/opusplan) — resolved to a default model.
+ * 2. Legacy Opus first-party remap (4.0/4.1 → current Opus).
+ * 3. Ant model override (USER_TYPE === 'ant').
+ * 4. Custom model name — returned as-is (preserving original case) so arbitrary
+ *    model IDs (e.g. third-party deployment IDs, customModel setting values)
+ *    pass through unchanged.
  *
  * @param modelInput The model alias or name provided by the user.
  */

@@ -1,0 +1,2 @@
+// Stub: YOLO classifier prompts — not available in external builds.
+export const PERMISSIONS_ANTHROPIC_PROMPT = ''

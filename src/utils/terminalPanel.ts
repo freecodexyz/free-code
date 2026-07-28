@@ -21,6 +21,7 @@ import instances from '../ink/instances.js'
 import { registerCleanup } from './cleanupRegistry.js'
 import { pwd } from './cwd.js'
 import { logForDebugging } from './debug.js'
+import { getShell } from './platform.js'
 
 const TMUX_SESSION = 'panel'
 
@@ -81,7 +82,7 @@ class TerminalPanel {
   }
 
   private createSession(): boolean {
-    const shell = process.env.SHELL || '/bin/bash'
+    const shell = getShell()
     const cwd = pwd()
     const socket = getTerminalPanelSocket()
 
@@ -180,7 +181,7 @@ class TerminalPanel {
 
   /** Fallback when tmux is not available — runs a non-persistent shell. */
   private runShellDirect(): void {
-    const shell = process.env.SHELL || '/bin/bash'
+    const shell = getShell()
     const cwd = pwd()
     spawnSync(shell, ['-i', '-l'], {
       stdio: 'inherit',

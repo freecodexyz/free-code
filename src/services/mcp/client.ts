@@ -93,6 +93,7 @@ import {
   getWebSocketProxyAgent,
   getWebSocketProxyUrl,
 } from '../../utils/proxy.js'
+import { crossPlatformKill } from '../../utils/process/kill.js'
 import { recursivelySanitizeUnicode } from '../../utils/sanitization.js'
 import { getSessionIngressAuthToken } from '../../utils/sessionIngressAuth.js'
 import { subprocessEnv } from '../../utils/subprocessEnv.js'
@@ -1438,7 +1439,7 @@ export const connectToServer = memoize(
 
               // First try SIGINT (like Ctrl+C)
               try {
-                process.kill(childPid, 'SIGINT')
+                crossPlatformKill(childPid, 'SIGINT')
               } catch (error) {
                 logMCPDebug(name, `Error sending SIGINT: ${error}`)
                 return
@@ -1492,7 +1493,7 @@ export const connectToServer = memoize(
                         'SIGINT failed, sending SIGTERM to MCP server process',
                       )
                       try {
-                        process.kill(childPid, 'SIGTERM')
+                        crossPlatformKill(childPid, 'SIGTERM')
                       } catch (termError) {
                         logMCPDebug(name, `Error sending SIGTERM: ${termError}`)
                         resolved = true
@@ -1523,7 +1524,7 @@ export const connectToServer = memoize(
                           'SIGTERM failed, sending SIGKILL to MCP server process',
                         )
                         try {
-                          process.kill(childPid, 'SIGKILL')
+                          crossPlatformKill(childPid, 'SIGKILL')
                         } catch (killError) {
                           logMCPDebug(
                             name,

@@ -28,8 +28,8 @@ export const WINDOWS_REGISTRY_KEY_PATH_HKCU =
 /** Windows registry value name containing the JSON settings blob. */
 export const WINDOWS_REGISTRY_VALUE_NAME = 'Settings'
 
-/** Path to macOS plutil binary. */
-export const PLUTIL_PATH = '/usr/bin/plutil'
+/** Path to macOS plutil binary. Only used on macOS; empty on other platforms. */
+export const PLUTIL_PATH = process.platform === 'darwin' ? '/usr/bin/plutil' : ''
 
 /** Arguments for plutil to convert plist to JSON on stdout (append plist path). */
 export const PLUTIL_ARGS_PREFIX = ['-convert', 'json', '-o', '-', '--'] as const

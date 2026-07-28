@@ -376,6 +376,23 @@ export const SettingsSchema = lazySchema(() =>
         .string()
         .optional()
         .describe('Override the default model used by Claude Code'),
+      // Arbitrary custom model name (e.g. third-party deployment ID). Takes
+      // precedence over the predefined-alias `model` field when both are set.
+      customModel: z
+        .string()
+        .optional()
+        .describe(
+          'Arbitrary custom model name (e.g. a third-party deployment ID). ' +
+            'Takes precedence over the `model` field when both are set.',
+        ),
+      // Custom API endpoint base URL for non-default Anthropic-compatible APIs.
+      apiBaseUrl: z
+        .string()
+        .optional()
+        .describe(
+          'Base URL for a custom Anthropic-compatible API endpoint. ' +
+            'Overrides ANTHROPIC_BASE_URL when set.',
+        ),
       // Enterprise allowlist of models
       availableModels: z
         .array(z.string())

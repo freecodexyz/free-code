@@ -1,4 +1,5 @@
 import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from '../../services/analytics/index.js'
+import { getSettings_DEPRECATED } from '../settings/settings.js'
 import { isEnvTruthy } from '../envUtils.js'
 
 export type APIProvider = 'firstParty' | 'bedrock' | 'vertex' | 'foundry' | 'openai'
@@ -20,12 +21,26 @@ export function getAPIProviderForStatsig(): AnalyticsMetadata_I_VERIFIED_THIS_IS
 }
 
 /**
- * Check if ANTHROPIC_BASE_URL is a first-party Anthropic API URL.
+ * Resolves the API base URL using the priority:
+ * 1. ANTHROPIC_BASE_URL environment variable
+ * 2. Settings apiBaseUrl field
+ * 3. undefined (use SDK default)
+ */
+export function getApiBaseUrl(): string | undefined {
+  return (
+    process.env.ANTHROPIC_BASE_URL ||
+    getSettings_DEPRECATED().apiBaseUrl ||
+    undefined
+  )
+}
+
+/**
+ * Check if the resolved API base URL is a first-party Anthropic API URL.
  * Returns true if not set (default API) or points to api.anthropic.com
  * (or api-staging.anthropic.com for ant users).
  */
 export function isFirstPartyAnthropicBaseUrl(): boolean {
-  const baseUrl = process.env.ANTHROPIC_BASE_URL
+  const baseUrl = getApiBaseUrl()
   if (!baseUrl) {
     return true
   }

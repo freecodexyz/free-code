@@ -6,6 +6,7 @@ import { normalizeNameForMCP } from '../../services/mcp/normalization.js'
 import { logForDebugging } from '../debug.js'
 import { isFsInaccessible } from '../errors.js'
 import { execFileNoThrow } from '../execFileNoThrow.js'
+import { getIpcPath } from '../ipc.js'
 import { getPlatform } from '../platform.js'
 import { which } from '../which.js'
 
@@ -480,7 +481,7 @@ export function getSocketDir(): string {
  */
 export function getSecureSocketPath(): string {
   if (platform() === 'win32') {
-    return `\\\\.\\pipe\\${getSocketName()}`
+    return getIpcPath(getSocketName())
   }
   return join(getSocketDir(), `${process.pid}.sock`)
 }
@@ -492,7 +493,7 @@ export function getSecureSocketPath(): string {
 export function getAllSocketPaths(): string[] {
   // Windows uses named pipes, not Unix sockets
   if (platform() === 'win32') {
-    return [`\\\\.\\pipe\\${getSocketName()}`]
+    return [getIpcPath(getSocketName())]
   }
 
   const paths: string[] = []

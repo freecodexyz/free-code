@@ -1,3 +1,5 @@
+import { tryLoadNapiSync } from './napiLoader.js'
+
 export type ModifierKey = 'shift' | 'command' | 'control' | 'option'
 
 let prewarmed = false
@@ -17,13 +19,7 @@ function loadNativeModifiersModule(): NativeModifiersModule | null {
     return nativeModifiersModule
   }
 
-  try {
-    nativeModifiersModule =
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      (require('modifiers-napi') as NativeModifiersModule) ?? null
-  } catch {
-    nativeModifiersModule = null
-  }
+  nativeModifiersModule = tryLoadNapiSync<NativeModifiersModule>('modifiers-napi')
 
   return nativeModifiersModule
 }
